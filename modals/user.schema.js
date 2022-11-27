@@ -3,7 +3,7 @@ import AuthRoles from "../utils/authRoles";
 import bcrpyt from'bcryptjs'
 import JWT from 'jsonwebtoken'
 import crypto from "crypto"
-
+import config from "../config/index";
 
 const userSchema = mongoose.Schema({
   name: {
@@ -43,9 +43,36 @@ const userSchema = mongoose.Schema({
 //challenge 1 - encrpty password
 
 userSchema.pre("save", async function(next){
-    if(!(this.modified("password"))) return next()
+    if(!this.modified("password")) return next()
     this.password = await bcrpyt.hash(this.password, 10)
     next()
 })
+
+//adding more features directly to Schema
+
+userSchema.methods = {
+    //compare password
+    comparePassword: async function(enteredPassword){
+        return await bcrpyt.compare(enteredPassword, this.password)
+    },
+    //genrate JWT TOKEN
+    getJwtToken: function(){
+        return JWT.sign(
+            {
+                _id: this._id,
+                role: this.role
+            },
+            config.JWT_SECRET,
+            {
+                expiresIn: config.JWT_EXPIRY
+            }
+            //bad practice of secret but a way to do it. Above code is better way and is cleaner
+            /* 'bad-secret',{
+                expiresIn: '2h-bad'
+            } */
+
+        )
+    }
+}
 
 export default mongoose.model("User", userSchema)
