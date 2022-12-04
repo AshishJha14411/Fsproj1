@@ -1,40 +1,108 @@
-import User from "../modals/user.schema";
-import asyncHandler from "../services/asyncHandler";
-import CustomError from "../services/customError";
+import User from '../models/user.schema.js'
+import asyncHandler from '../services/asyncHandler'
+import CustomError from '../utils/customError'
+
 
 export const cookieOptions = {
-    expiresIn: new Date(Date.now() + 3 *24 * 60*60*1000),
-    httpOnly: true
-    // could be in sparate file in utils
+    expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    httpOnly: true,
+    //could be in a separate file in utils
 }
 
-/*******************************************  
-* @SignUp
-* @route http://localhost:4000/api/auth/singup
-* @description User Signup controller for creating a SignUp
-* @parameter
-* @retuns User Object 
-********************************************/
 
-export const singUp = asyncHandler(async(req,res)=> {
+/******************************************************
+ * @SIGNUP
+ * @route http://localhost:5000/api/auth/signup
+ * @description User signUp Controller for creating new user
+ * @parameters name, email, password
+ * @returns User Object
+ ******************************************************/
+export const signUp = asyncHandler(async (req, res) => {
+    const {name, email, password } = req.body
 
-    const {name,email, password} = req.body
-    if(!name||!email || !password){
-        throw new CustomError("Please fill all fields", 400)
+    if (!name || !email || !password) {
+        throw new CustomError('Please fill all fields', 400)
     }
     //check if user exists
-    const userExists = await User.findOne({email})
-    if(userExists){
-        throw new CustomError("User already Exists", 400)
+    const existingUser = await User.findOne({email})
+
+    if (existingUser) {
+        throw new CustomError('User already exists', 400)  
     }
-//when quering the database all the field will be given,when selecting it it will not be selected due to select:false
+
     const user = await User.create({
         name,
         email,
         password
-    })
-    const token = user.getJwtToken
+    });
+    const token = user.getJwtToken()
+    console.log(user);
     user.password = undefined
 
-    res.cookie("auth-token", token, cookieOptions)
+    res.cookie("token", token, cookieOptions)
+
+    res.status(200).json({
+        success: true,
+        token,
+        user
+    })
+
+})
+
+/******************************************************
+ * @LOGIN
+ * @route http://localhost:5000/api/auth/login
+ * @description User signIn Controller for loging new user
+ * @parameters  email, password
+ * @returns User Object
+ ******************************************************/
+
+export const login = asyncHandler(async (req, res) => {
+    const { email, password } = req.body
+
+    if ( !email || !password) {
+        throw new CustomError('Please fill all fields', 400)
+    }
+
+    const user = User.findOne({email}).select("+password")
+
+    if (!user) {
+        throw new CustomError('Invalid credentials', 400)
+    }
+
+    const isPasswordMatched = await user.comparePassword(password)
+
+    if (isPasswordMatched) {
+        const token = user.getJwtToken()
+        user.password = undefined;
+        res.cookie("token", token, cookieOptions)
+        return res.status(200).json({
+            success: true,
+            token,
+            user
+        })
+    }
+
+    throw new CustomError('Invalid credentials - pass', 400)
+
+})
+
+
+/******************************************************
+ * @LOGOUT
+ * @route http://localhost:5000/api/auth/logout
+ * @description User logout bby clearing user cookies
+ * @parameters  
+ * @returns success message
+ ******************************************************/
+export const logout = asyncHandler(async (_req, res) => {
+    // res.clearCookie()
+    res.cookie("token", null, {
+        expires: new Date(Date.now()),
+        httpOnly: true
+    })
+    res.status(200).json({
+        success: true,
+        message: "Logged Out"
+    })
 })
