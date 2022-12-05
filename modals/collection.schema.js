@@ -16,3 +16,5 @@ const collectionSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("Collection", collectionSchema);
+
+//CRUD
