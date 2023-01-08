@@ -73,3 +73,43 @@ export const addProduct = asyncHandler(async (req, res) => {
     }
   });
 });
+
+export const getAllProdcuts = asyncHandler(async (req,res) => {
+    const products = await Product.find({})
+
+    if(!products){
+        throw new CustomError("No Product was found", 404)
+
+    }
+    res.status(200).json({
+        success: true,
+        products
+    })
+})
+export const getProductById = asyncHandler(async (req,res) => {
+    const {id: productId} = req.params
+    const product = await Product.findById(productId)
+
+    if(!product){
+        throw new CustomError("No Product was found", 404)
+
+    }
+    res.status(200).json({
+        success: true,
+        product
+    })
+})
+export const deleteProductById = asyncHandler(async (req,res) => {
+    const {id: productId} = req.params
+    const product = await Product.findByIdAndDelete(productId)
+
+    if(!product){
+        throw new CustomError("No Product was found", 404)
+
+    }
+    res.status(200).json({
+        success: true,
+        product
+    })
+})
+
